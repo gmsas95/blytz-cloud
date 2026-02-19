@@ -12,7 +12,7 @@ import (
 	"blytz/internal/stripe"
 )
 
-func NewRouter(database *db.DB, prov *provisioner.Service, stripeSvc *stripe.Service, stripeWebhook *stripe.WebhookHandler, cfg *config.Config, logger *zap.Logger) *gin.Engine {
+func NewRouter(database *db.DB, prov provisioner.Provisioner, stripeSvc *stripe.Service, stripeWebhook *stripe.WebhookHandler, cfg *config.Config, logger *zap.Logger) *gin.Engine {
 	router := gin.New()
 	router.Use(gin.Recovery())
 	router.Use(loggingMiddleware(logger))

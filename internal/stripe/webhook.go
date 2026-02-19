@@ -16,11 +16,11 @@ import (
 
 type WebhookHandler struct {
 	db            *db.DB
-	provisioner   *provisioner.Service
+	provisioner   provisioner.Provisioner
 	webhookSecret string
 }
 
-func NewWebhookHandler(database *db.DB, prov *provisioner.Service, webhookSecret string) *WebhookHandler {
+func NewWebhookHandler(database *db.DB, prov provisioner.Provisioner, webhookSecret string) *WebhookHandler {
 	return &WebhookHandler{
 		db:            database,
 		provisioner:   prov,

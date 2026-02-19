@@ -63,6 +63,11 @@ func (cg *ComposeGenerator) GenerateEnvFile(customerID string, openAIKey string)
 	customerDir := filepath.Join(cg.baseDir, customerID)
 	envPath := filepath.Join(customerDir, ".env.secret")
 
+	// Create customer directory if it doesn't exist
+	if err := os.MkdirAll(customerDir, 0755); err != nil {
+		return fmt.Errorf("create customer directory: %w", err)
+	}
+
 	// Write with restricted permissions (owner read/write only)
 	if err := os.WriteFile(envPath, []byte(envContent), 0600); err != nil {
 		return fmt.Errorf("write env file: %w", err)

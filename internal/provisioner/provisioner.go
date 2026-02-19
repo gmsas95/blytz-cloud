@@ -6,7 +6,18 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+
+	"blytz/internal/telegram"
 )
+
+// Provisioner defines the interface for customer lifecycle management
+type Provisioner interface {
+	Provision(ctx context.Context, customerID string) error
+	Suspend(ctx context.Context, customerID string) error
+	Resume(ctx context.Context, customerID string) error
+	Terminate(ctx context.Context, customerID string) error
+	ValidateBotToken(token string) (*telegram.BotInfo, error)
+}
 
 type DockerProvisioner struct {
 	baseDir string
