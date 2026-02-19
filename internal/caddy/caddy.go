@@ -73,6 +73,7 @@ func (c *Client) AddSubdomain(subdomain, target string) error {
 }
 
 func (c *Client) RemoveSubdomain(subdomain string) error {
+	// First, get all routes
 	url := fmt.Sprintf("%s/config/apps/http/servers/srv0/routes", c.adminURL)
 
 	resp, err := http.Get(url)
@@ -83,6 +84,54 @@ func (c *Client) RemoveSubdomain(subdomain string) error {
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("get routes failed: %s", resp.Status)
+	}
+
+	// Parse routes
+	var routes []Route
+	if err := json.NewDecoder(resp.Body).Decode(&routes); err != nil {
+		return fmt.Errorf("decode routes: %w", err)
+	}
+
+	// Find route index by subdomain
+	var routeIndex *int
+	for i, route := range routes {
+		for _, match := range route.Match {
+			for _, host := range match.Host {
+				if host == subdomain {
+					idx := i
+					routeIndex = &idx
+					break
+				}
+			}
+			if routeIndex != nil {
+				break
+			}
+		}
+		if routeIndex != nil {
+			break
+		}
+	}
+
+	if routeIndex == nil {
+		return fmt.Errorf("route not found for subdomain: %s", subdomain)
+	}
+
+	// Delete the specific route using index
+	deleteURL := fmt.Sprintf("%s/config/apps/http/servers/srv0/routes/%d", c.adminURL, *routeIndex)
+
+	req, err := http.NewRequest(http.MethodDelete, deleteURL, nil)
+	if err != nil {
+		return fmt.Errorf("create delete request: %w", err)
+	}
+
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("delete route: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("delete route failed: %s", resp.Status)
 	}
 
 	return nil

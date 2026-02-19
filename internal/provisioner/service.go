@@ -3,7 +3,8 @@ package provisioner
 import (
 	"context"
 	"fmt"
-	"log"
+	"os"
+	"path/filepath"
 
 	"blytz/internal/caddy"
 	"blytz/internal/db"
@@ -11,6 +12,7 @@ import (
 	"blytz/internal/workspace"
 
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 )
 
 func generateGatewayToken() string {
@@ -24,7 +26,7 @@ type Service struct {
 	compose    *ComposeGenerator
 	ports      *PortAllocator
 	caddy      *caddy.Client
-	logger     *log.Logger
+	logger     *zap.Logger
 	baseDomain string
 	openAIKey  string
 	baseDir    string
@@ -32,7 +34,7 @@ type Service struct {
 	portEnd    int
 }
 
-func NewService(database *db.DB, templatesDir, baseDir, openAIKey string, portStart, portEnd int, caddyClient *caddy.Client, baseDomain string, logger *log.Logger) *Service {
+func NewService(database *db.DB, templatesDir, baseDir, openAIKey string, portStart, portEnd int, caddyClient *caddy.Client, baseDomain string, logger *zap.Logger) *Service {
 	return &Service{
 		db:         database,
 		workspace:  workspace.NewWithBaseDir(templatesDir, baseDir),
@@ -76,9 +78,21 @@ func (s *Service) Provision(ctx context.Context, customerID string) error {
 		return fmt.Errorf("record port allocation: %w", err)
 	}
 
+	// Also update the customer's container_port field
+	if err := s.db.UpdateCustomerPort(ctx, customerID, port); err != nil {
+		s.cleanup(customerID, port)
+		s.db.UpdateCustomerStatus(ctx, customerID, "pending")
+		return fmt.Errorf("update customer port: %w", err)
+	}
+
+	if err := s.compose.GenerateEnvFile(customerID, s.openAIKey); err != nil {
+		s.cleanup(customerID, port)
+		s.db.UpdateCustomerStatus(ctx, customerID, "pending")
+		return fmt.Errorf("generate env file: %w", err)
+	}
+
 	if err := s.compose.Generate(customerID, port, s.openAIKey); err != nil {
-		s.db.ReleasePort(ctx, port)
-		s.ports.ReleasePort(port)
+		s.cleanup(customerID, port)
 		s.db.UpdateCustomerStatus(ctx, customerID, "pending")
 		return fmt.Errorf("generate compose: %w", err)
 	}
@@ -110,7 +124,7 @@ func (s *Service) Provision(ctx context.Context, customerID string) error {
 		subdomain := fmt.Sprintf("%s.%s", customerID, s.baseDomain)
 		target := fmt.Sprintf("localhost:%d", port)
 		if err := s.caddy.AddSubdomain(subdomain, target); err != nil {
-			s.logger.Printf("Failed to add Caddy subdomain (non-fatal): %v", err)
+			s.logger.Warn("Failed to add Caddy subdomain (non-fatal)", zap.Error(err))
 		}
 	}
 
@@ -150,6 +164,10 @@ func (s *Service) Terminate(ctx context.Context, customerID string) error {
 	if customer.ContainerPort != nil {
 		s.db.ReleasePort(ctx, *customer.ContainerPort)
 		s.ports.ReleasePort(*customer.ContainerPort)
+		// Clear the container_port from customer record
+		if err := s.db.ClearCustomerPort(ctx, customerID); err != nil {
+			return fmt.Errorf("clear customer port: %w", err)
+		}
 	}
 
 	if err := s.docker.Remove(ctx, customerID); err != nil {
@@ -171,4 +189,8 @@ func (s *Service) cleanup(customerID string, port int) {
 	s.docker.Remove(context.Background(), customerID)
 	s.db.ReleasePort(context.Background(), port)
 	s.ports.ReleasePort(port)
+
+	// Remove env file
+	envPath := filepath.Join(s.baseDir, customerID, ".env.secret")
+	os.Remove(envPath) // Ignore errors
 }

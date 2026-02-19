@@ -1,7 +1,6 @@
 package provisioner
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -145,8 +144,10 @@ func TestServiceTerminate(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	// Allocate a port
+	// Allocate a port and update customer
 	err = database.AllocatePort(ctx, customer.ID, 30001)
+	require.NoError(t, err)
+	err = database.UpdateCustomerPort(ctx, customer.ID, 30001)
 	require.NoError(t, err)
 
 	tmpDir := t.TempDir()
@@ -198,38 +199,26 @@ func TestServiceValidateBotToken(t *testing.T) {
 }
 
 func TestPortExhaustion(t *testing.T) {
-	database, err := db.New(":memory:")
-	require.NoError(t, err)
-	defer database.Close()
-	require.NoError(t, database.Migrate())
+	// Test that port allocator correctly handles exhaustion
+	allocator := NewPortAllocator(30000, 30002)
 
-	ctx := t.Context()
-	tmpDir := t.TempDir()
-	svc := NewService(
-		database,
-		tmpDir,
-		tmpDir,
-		"sk-test",
-		30000,
-		30002, // Only 3 ports available
-		nil,
-		"localhost",
-		nil,
-	)
-
-	// Create 3 customers and try to allocate all ports
+	// Allocate all 3 ports
 	for i := 0; i < 3; i++ {
-		_, err := database.CreateCustomer(ctx, &db.CreateCustomerRequest{
-			Email:              string(rune('a'+i)) + "@example.com",
-			AssistantName:      "Test",
-			CustomInstructions: "Help me",
-			TelegramBotToken:   "123:abc",
-		})
-		require.NoError(t, err)
+		port, err := allocator.AllocatePort()
+		require.NoError(t, err, "Should allocate port %d", i)
+		assert.Equal(t, 30000+i, port)
 	}
 
-	// This should fail when trying to provision 4th (not enough ports)
-	// But we need to actually try provisioning to test this
+	// 4th allocation should fail
+	_, err := allocator.AllocatePort()
+	assert.Error(t, err, "Should fail when no ports available")
+	assert.Contains(t, err.Error(), "no available ports")
+
+	// Release one port and try again
+	allocator.ReleasePort(30001)
+	port, err := allocator.AllocatePort()
+	require.NoError(t, err, "Should allocate after release")
+	assert.Equal(t, 30001, port)
 }
 
 func TestComposeFileGeneration(t *testing.T) {
@@ -252,10 +241,21 @@ func TestComposeFileGeneration(t *testing.T) {
 	// Verify key components
 	assert.Contains(t, contentStr, "blytz-test-customer")
 	assert.Contains(t, contentStr, "30001:18789")
-	assert.Contains(t, contentStr, openAIKey)
+	assert.Contains(t, contentStr, "env_file:") // Check for env_file directive
+	assert.Contains(t, contentStr, ".env.secret")
+	assert.NotContains(t, contentStr, openAIKey) // API key should NOT be in compose file
 	assert.Contains(t, contentStr, "memory: 1G")
 	assert.Contains(t, contentStr, "cpus: '0.5'")
 	assert.Contains(t, contentStr, "restart: unless-stopped")
+
+	// Verify env file was created
+	err = gen.GenerateEnvFile(customerID, openAIKey)
+	require.NoError(t, err)
+
+	envPath := filepath.Join(tmpDir, customerID, ".env.secret")
+	envContent, err := os.ReadFile(envPath)
+	require.NoError(t, err)
+	assert.Contains(t, string(envContent), openAIKey)
 }
 
 func TestWorkspaceGeneration(t *testing.T) {

@@ -12,7 +12,32 @@ func TestGenerateCustomerID(t *testing.T) {
 	}{
 		{"user@example.com", "user-example-com"},
 		{"User.Name@Example.COM", "user-name-example-com"},
-		{"test+tag@domain.co.uk", "test+tag-domain-co-uk"},
+		{"test+tag@domain.co.uk", "testtag-domain-co-uk"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.email, func(t *testing.T) {
+			got := generateCustomerID(tt.email)
+			if got != tt.expected {
+				t.Errorf("generateCustomerID(%q) = %q, want %q", tt.email, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestGenerateCustomerID_Sanitization(t *testing.T) {
+	tests := []struct {
+		email    string
+		expected string
+	}{
+		{"user@example.com", "user-example-com"},
+		{"User.Name@Example.COM", "user-name-example-com"},
+		{"test+tag@domain.co.uk", "testtag-domain-co-uk"},
+		{"../../etc/passwd@example.com", "etc-passwd-example-com"},
+		{"test<script>@example.com", "testscript-example-com"},
+		{"a@b.co", "a-b-co"},
+		{"very-long-email-that-exceeds-sixty-three-characters-limit@example.com",
+			"very-long-email-that-exceeds-sixty-three-characters-limit-examp"},
 	}
 
 	for _, tt := range tests {

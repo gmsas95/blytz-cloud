@@ -3,13 +3,12 @@ package api
 import (
 	"bytes"
 	"encoding/json"
-	"log"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 
 	"blytz/internal/config"
 	"blytz/internal/db"
@@ -35,7 +34,7 @@ func setupTestServer(t *testing.T) (*gin.Engine, *db.DB) {
 		PortRangeEnd:   30999,
 	}
 
-	logger := log.New(os.Stdout, "[TEST] ", log.LstdFlags)
+	logger, _ := zap.NewDevelopment()
 
 	prov := provisioner.NewService(
 		database,
@@ -68,13 +67,13 @@ func TestHealthCheck(t *testing.T) {
 		t.Errorf("Expected status 200, got %d", w.Code)
 	}
 
-	var response map[string]string
+	var response map[string]interface{}
 	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
 		t.Fatalf("Failed to parse response: %v", err)
 	}
 
 	if response["status"] != "healthy" {
-		t.Errorf("Expected status healthy, got %s", response["status"])
+		t.Errorf("Expected status healthy, got %v", response["status"])
 	}
 }
 

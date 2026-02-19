@@ -13,6 +13,7 @@ import (
 	stripeSDK "github.com/stripe/stripe-go/v84"
 
 	"blytz/internal/db"
+	"blytz/internal/provisioner"
 )
 
 func TestNewService(t *testing.T) {
@@ -134,9 +135,9 @@ func TestHandleCheckoutCompleted(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	// Create a mock provisioner that does nothing
-	mockProv := &mockProvisioner{}
-	handler := NewWebhookHandler(database, mockProv, "whsec_test")
+	// Use a minimal provisioner for testing (provision will fail but DB updates will work)
+	prov := provisioner.NewService(database, "", "", "", 30000, 30005, nil, "localhost", nil)
+	handler := NewWebhookHandler(database, prov, "whsec_test")
 
 	sessionData := map[string]interface{}{
 		"metadata": map[string]string{
@@ -176,8 +177,9 @@ func TestHandleSubscriptionDeleted(t *testing.T) {
 	err = database.UpdateStripeInfo(ctx, customer.ID, "cus_test_123", "sub_test_456")
 	require.NoError(t, err)
 
-	mockProv := &mockProvisioner{}
-	handler := NewWebhookHandler(database, mockProv, "whsec_test")
+	// Use a minimal provisioner for testing
+	prov := provisioner.NewService(database, "", "", "", 30000, 30005, nil, "localhost", nil)
+	handler := NewWebhookHandler(database, prov, "whsec_test")
 
 	subData := map[string]interface{}{
 		"customer": "cus_test_123",
@@ -208,8 +210,9 @@ func TestHandlePaymentFailed(t *testing.T) {
 	err = database.UpdateStripeInfo(ctx, customer.ID, "cus_test_123", "sub_test_456")
 	require.NoError(t, err)
 
-	mockProv := &mockProvisioner{}
-	handler := NewWebhookHandler(database, mockProv, "whsec_test")
+	// Use a minimal provisioner for testing
+	prov := provisioner.NewService(database, "", "", "", 30000, 30005, nil, "localhost", nil)
+	handler := NewWebhookHandler(database, prov, "whsec_test")
 
 	invoiceData := map[string]interface{}{
 		"customer": "cus_test_123",
@@ -243,27 +246,4 @@ func TestWebhookEventParsing(t *testing.T) {
 	err := json.Unmarshal(event.Data.Raw, &data)
 	require.NoError(t, err)
 	assert.Equal(t, "test-123", data["metadata"].(map[string]interface{})["customer_id"])
-}
-
-// mockProvisioner is a simple mock for testing
-type mockProvisioner struct{}
-
-func (m *mockProvisioner) Provision(ctx interface{}, customerID string) error {
-	return nil
-}
-
-func (m *mockProvisioner) Suspend(ctx interface{}, customerID string) error {
-	return nil
-}
-
-func (m *mockProvisioner) Resume(ctx interface{}, customerID string) error {
-	return nil
-}
-
-func (m *mockProvisioner) Terminate(ctx interface{}, customerID string) error {
-	return nil
-}
-
-func (m *mockProvisioner) ValidateBotToken(token string) (interface{}, error) {
-	return nil, nil
 }

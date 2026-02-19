@@ -26,9 +26,10 @@ services:
       - "%d:18789"
     volumes:
       - ./.openclaw:/root/.openclaw
+    env_file:
+      - .env.secret
     environment:
       - OPENCLAW_STATE_DIR=/root/.openclaw
-      - OPENAI_API_KEY=%s
     deploy:
       resources:
         limits:
@@ -41,7 +42,7 @@ services:
       timeout: 10s
       retries: 3
       start_period: 60s
-`, customerID, port, openAIKey)
+`, customerID, port)
 
 	customerDir := filepath.Join(cg.baseDir, customerID)
 	if err := os.MkdirAll(customerDir, 0755); err != nil {
@@ -51,6 +52,20 @@ services:
 	composePath := filepath.Join(customerDir, "docker-compose.yml")
 	if err := os.WriteFile(composePath, []byte(compose), 0644); err != nil {
 		return fmt.Errorf("write compose file: %w", err)
+	}
+
+	return nil
+}
+
+func (cg *ComposeGenerator) GenerateEnvFile(customerID string, openAIKey string) error {
+	envContent := fmt.Sprintf("OPENAI_API_KEY=%s\n", openAIKey)
+
+	customerDir := filepath.Join(cg.baseDir, customerID)
+	envPath := filepath.Join(customerDir, ".env.secret")
+
+	// Write with restricted permissions (owner read/write only)
+	if err := os.WriteFile(envPath, []byte(envContent), 0600); err != nil {
+		return fmt.Errorf("write env file: %w", err)
 	}
 
 	return nil

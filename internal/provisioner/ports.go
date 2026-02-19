@@ -3,9 +3,11 @@ package provisioner
 import (
 	"context"
 	"fmt"
+	"sync"
 )
 
 type PortAllocator struct {
+	mu        sync.Mutex
 	startPort int
 	endPort   int
 	allocated map[int]bool
@@ -22,6 +24,9 @@ func NewPortAllocator(startPort, endPort int) *PortAllocator {
 func (pa *PortAllocator) LoadAllocatedPorts(ctx context.Context, db interface {
 	GetAllocatedPorts(context.Context) ([]int, error)
 }) error {
+	pa.mu.Lock()
+	defer pa.mu.Unlock()
+
 	ports, err := db.GetAllocatedPorts(ctx)
 	if err != nil {
 		return fmt.Errorf("load allocated ports: %w", err)
@@ -35,6 +40,9 @@ func (pa *PortAllocator) LoadAllocatedPorts(ctx context.Context, db interface {
 }
 
 func (pa *PortAllocator) AllocatePort() (int, error) {
+	pa.mu.Lock()
+	defer pa.mu.Unlock()
+
 	for port := pa.startPort; port <= pa.endPort; port++ {
 		if !pa.allocated[port] {
 			pa.allocated[port] = true
@@ -45,5 +53,8 @@ func (pa *PortAllocator) AllocatePort() (int, error) {
 }
 
 func (pa *PortAllocator) ReleasePort(port int) {
+	pa.mu.Lock()
+	defer pa.mu.Unlock()
+
 	delete(pa.allocated, port)
 }

@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -15,29 +14,34 @@ import (
 	"blytz/internal/db"
 	"blytz/internal/provisioner"
 	"blytz/internal/stripe"
+	"go.uber.org/zap"
 )
 
 func main() {
-	logger := log.New(os.Stdout, "[BLYTZ] ", log.LstdFlags)
+	logger, err := zap.NewProduction()
+	if err != nil {
+		panic(err)
+	}
+	defer logger.Sync()
 
 	cfg, err := config.Load()
 	if err != nil {
-		logger.Fatalf("Failed to load configuration: %v", err)
+		logger.Fatal("Failed to load configuration", zap.Error(err))
 	}
 
 	database, err := db.New(cfg.DatabasePath)
 	if err != nil {
-		logger.Fatalf("Failed to connect to database: %v", err)
+		logger.Fatal("Failed to connect to database", zap.Error(err))
 	}
 	defer database.Close()
 
 	if err := database.Migrate(); err != nil {
-		logger.Fatalf("Failed to run migrations: %v", err)
+		logger.Fatal("Failed to run migrations", zap.Error(err))
 	}
 
 	ctx := context.Background()
 	if err := loadAllocatedPorts(ctx, database); err != nil {
-		logger.Fatalf("Failed to load allocated ports: %v", err)
+		logger.Fatal("Failed to load allocated ports", zap.Error(err))
 	}
 
 	var caddyClient *caddy.Client
@@ -68,9 +72,9 @@ func main() {
 	}
 
 	go func() {
-		logger.Printf("Server starting on port %s", cfg.Port)
+		logger.Info("Server starting", zap.String("port", cfg.Port))
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Fatalf("Server failed to start: %v", err)
+			logger.Fatal("Server failed to start", zap.Error(err))
 		}
 	}()
 
@@ -78,16 +82,16 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	logger.Println("Shutting down server...")
+	logger.Info("Shutting down server...")
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
-		logger.Printf("Server forced to shutdown: %v", err)
+		logger.Error("Server forced to shutdown", zap.Error(err))
 	}
 
-	logger.Println("Server exited")
+	logger.Info("Server exited")
 }
 
 func loadAllocatedPorts(ctx context.Context, database *db.DB) error {

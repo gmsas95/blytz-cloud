@@ -1,10 +1,10 @@
 package api
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 
 	"blytz/internal/config"
 	"blytz/internal/db"
@@ -12,7 +12,7 @@ import (
 	"blytz/internal/stripe"
 )
 
-func NewRouter(database *db.DB, prov *provisioner.Service, stripeSvc *stripe.Service, stripeWebhook *stripe.WebhookHandler, cfg *config.Config, logger *log.Logger) *gin.Engine {
+func NewRouter(database *db.DB, prov *provisioner.Service, stripeSvc *stripe.Service, stripeWebhook *stripe.WebhookHandler, cfg *config.Config, logger *zap.Logger) *gin.Engine {
 	router := gin.New()
 	router.Use(gin.Recovery())
 	router.Use(loggingMiddleware(logger))
@@ -22,10 +22,10 @@ func NewRouter(database *db.DB, prov *provisioner.Service, stripeSvc *stripe.Ser
 	// Health check
 	router.GET("/api/health", handler.HealthCheck)
 
-	// API endpoints
-	router.POST("/api/signup", handler.CreateCustomer)
+	// API endpoints with rate limiting
+	router.POST("/api/signup", signupRateLimit(), handler.CreateCustomer)
 	router.GET("/api/status/:id", handler.GetCustomerStatus)
-	router.POST("/api/webhook/stripe", stripeWebhook.HandleWebhook)
+	router.POST("/api/webhook/stripe", webhookRateLimit(), stripeWebhook.HandleWebhook)
 
 	// HTML pages
 	router.GET("/", serveIndex)
@@ -35,10 +35,14 @@ func NewRouter(database *db.DB, prov *provisioner.Service, stripeSvc *stripe.Ser
 	return router
 }
 
-func loggingMiddleware(logger *log.Logger) gin.HandlerFunc {
+func loggingMiddleware(logger *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Next()
-		logger.Printf("%s %s %d", c.Request.Method, c.Request.URL.Path, c.Writer.Status())
+		logger.Info("Request",
+			zap.String("method", c.Request.Method),
+			zap.String("path", c.Request.URL.Path),
+			zap.Int("status", c.Writer.Status()),
+		)
 	}
 }
 

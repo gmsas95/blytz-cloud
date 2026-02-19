@@ -61,6 +61,9 @@ func (db *DB) Migrate() error {
 		`CREATE INDEX IF NOT EXISTS idx_customers_email ON customers(email)`,
 		`CREATE INDEX IF NOT EXISTS idx_customers_status ON customers(status)`,
 		`CREATE INDEX IF NOT EXISTS idx_customers_stripe_customer ON customers(stripe_customer_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_customers_stripe_subscription ON customers(stripe_subscription_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_customers_stripe_session ON customers(stripe_checkout_session_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_customers_container_port ON customers(container_port)`,
 		`CREATE TABLE IF NOT EXISTS audit_log (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			customer_id TEXT NOT NULL,
@@ -89,10 +92,46 @@ func (db *DB) Migrate() error {
 }
 
 func generateCustomerID(email string) string {
+	// Validate email format first
+	if !isValidEmail(email) {
+		return ""
+	}
+
 	id := strings.ToLower(email)
+
+	// Replace special characters with safe separators
 	id = strings.ReplaceAll(id, "@", "-")
 	id = strings.ReplaceAll(id, ".", "-")
+	id = strings.ReplaceAll(id, "/", "-")
+
+	// Remove any remaining non-alphanumeric characters except hyphen
+	var result strings.Builder
+	for _, r := range id {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '-' {
+			result.WriteRune(r)
+		}
+	}
+	id = result.String()
+
+	// Remove leading/trailing hyphens and consecutive hyphens
+	id = strings.Trim(id, "-")
+	for strings.Contains(id, "--") {
+		id = strings.ReplaceAll(id, "--", "-")
+	}
+
+	// Enforce max length (63 chars for Docker container names)
+	if len(id) > 63 {
+		id = id[:63]
+	}
+
 	return id
+}
+
+func isValidEmail(email string) bool {
+	// Simple validation - consider using regex for production
+	return strings.Contains(email, "@") &&
+		len(email) > 3 &&
+		len(email) < 254
 }
 
 type Customer struct {
@@ -126,6 +165,9 @@ type CreateCustomerRequest struct {
 
 func (db *DB) CreateCustomer(ctx context.Context, req *CreateCustomerRequest) (*Customer, error) {
 	id := generateCustomerID(req.Email)
+	if id == "" {
+		return nil, fmt.Errorf("invalid email format")
+	}
 
 	customer := &Customer{
 		ID:                 id,
@@ -273,6 +315,15 @@ func (db *DB) UpdateCustomerTelegramUsername(ctx context.Context, id string, use
 	return nil
 }
 
+func (db *DB) ClearCustomerPort(ctx context.Context, id string) error {
+	query := `UPDATE customers SET container_port = NULL, updated_at = ? WHERE id = ?`
+	_, err := db.conn.ExecContext(ctx, query, time.Now(), id)
+	if err != nil {
+		return fmt.Errorf("clear customer port: %w", err)
+	}
+	return nil
+}
+
 func (db *DB) UpdateStripeInfo(ctx context.Context, id string, stripeCustomerID, stripeSubscriptionID string) error {
 	query := `UPDATE customers SET 
 		stripe_customer_id = ?, 
@@ -303,6 +354,15 @@ func (db *DB) GetCustomerByStripeID(ctx context.Context, stripeCustomerID string
 	}
 
 	return db.GetCustomerByID(ctx, id)
+}
+
+func (db *DB) UpdateCustomerPort(ctx context.Context, id string, port int) error {
+	query := `UPDATE customers SET container_port = ?, updated_at = ? WHERE id = ?`
+	_, err := db.conn.ExecContext(ctx, query, port, time.Now(), id)
+	if err != nil {
+		return fmt.Errorf("update customer port: %w", err)
+	}
+	return nil
 }
 
 func (db *DB) logAudit(ctx context.Context, customerID, action string, details interface{}) error {

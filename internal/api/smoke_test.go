@@ -11,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 
 	"blytz/internal/config"
 	"blytz/internal/db"
@@ -32,6 +33,8 @@ func TestSmokeSignupFlow(t *testing.T) {
 		PortRangeEnd:   30999,
 	}
 
+	logger, _ := zap.NewDevelopment()
+
 	prov := provisioner.NewService(
 		database,
 		"./internal/workspace/templates",
@@ -41,13 +44,13 @@ func TestSmokeSignupFlow(t *testing.T) {
 		cfg.PortRangeEnd,
 		nil,
 		"localhost",
-		nil,
+		logger,
 	)
 
 	stripeSvc := stripe.NewService("sk-test", "price-test")
 	stripeWebhook := stripe.NewWebhookHandler(database, prov, "whsec-test")
 
-	router := NewRouter(database, prov, stripeSvc, stripeWebhook, cfg, nil)
+	router := NewRouter(database, prov, stripeSvc, stripeWebhook, cfg, logger)
 
 	// Step 1: Health check
 	t.Run("health check", func(t *testing.T) {
@@ -98,6 +101,8 @@ func TestSmokeCapacityLimit(t *testing.T) {
 		PortRangeEnd:   30999,
 	}
 
+	logger, _ := zap.NewDevelopment()
+
 	prov := provisioner.NewService(
 		database,
 		"./internal/workspace/templates",
@@ -107,13 +112,13 @@ func TestSmokeCapacityLimit(t *testing.T) {
 		cfg.PortRangeEnd,
 		nil,
 		"localhost",
-		nil,
+		logger,
 	)
 
 	stripeSvc := stripe.NewService("sk-test", "price-test")
 	stripeWebhook := stripe.NewWebhookHandler(database, prov, "whsec-test")
 
-	router := NewRouter(database, prov, stripeSvc, stripeWebhook, cfg, nil)
+	router := NewRouter(database, prov, stripeSvc, stripeWebhook, cfg, logger)
 
 	// Fill up capacity
 	ctx := t.Context()
@@ -157,6 +162,8 @@ func TestSmokeConcurrentRequests(t *testing.T) {
 		PortRangeEnd:   30999,
 	}
 
+	logger, _ := zap.NewDevelopment()
+
 	prov := provisioner.NewService(
 		database,
 		"./internal/workspace/templates",
@@ -166,13 +173,13 @@ func TestSmokeConcurrentRequests(t *testing.T) {
 		cfg.PortRangeEnd,
 		nil,
 		"localhost",
-		nil,
+		logger,
 	)
 
 	stripeSvc := stripe.NewService("sk-test", "price-test")
 	stripeWebhook := stripe.NewWebhookHandler(database, prov, "whsec-test")
 
-	router := NewRouter(database, prov, stripeSvc, stripeWebhook, cfg, nil)
+	router := NewRouter(database, prov, stripeSvc, stripeWebhook, cfg, logger)
 
 	// Send multiple health check requests concurrently
 	done := make(chan bool, 10)
@@ -313,11 +320,12 @@ func TestSmokeHtmlPages(t *testing.T) {
 	require.NoError(t, database.Migrate())
 
 	cfg := &config.Config{}
-	prov := provisioner.NewService(database, "", "", "", 30000, 30005, nil, "localhost", nil)
+	logger, _ := zap.NewDevelopment()
+	prov := provisioner.NewService(database, "", "", "", 30000, 30005, nil, "localhost", logger)
 	stripeSvc := stripe.NewService("", "")
 	stripeWebhook := stripe.NewWebhookHandler(database, prov, "")
 
-	router := NewRouter(database, prov, stripeSvc, stripeWebhook, cfg, nil)
+	router := NewRouter(database, prov, stripeSvc, stripeWebhook, cfg, logger)
 
 	tests := []struct {
 		path       string

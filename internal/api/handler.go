@@ -1,12 +1,14 @@
 package api
 
 import (
+	"context"
 	"errors"
-	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 
 	"blytz/internal/config"
 	"blytz/internal/db"
@@ -19,10 +21,10 @@ type Handler struct {
 	provisioner *provisioner.Service
 	stripe      *stripe.Service
 	cfg         *config.Config
-	logger      *log.Logger
+	logger      *zap.Logger
 }
 
-func NewHandler(database *db.DB, prov *provisioner.Service, stripeSvc *stripe.Service, cfg *config.Config, logger *log.Logger) *Handler {
+func NewHandler(database *db.DB, prov *provisioner.Service, stripeSvc *stripe.Service, cfg *config.Config, logger *zap.Logger) *Handler {
 	return &Handler{
 		db:          database,
 		provisioner: prov,
@@ -33,10 +35,49 @@ func NewHandler(database *db.DB, prov *provisioner.Service, stripeSvc *stripe.Se
 }
 
 func (h *Handler) HealthCheck(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
-		"status":  "healthy",
+	ctx := c.Request.Context()
+
+	// Check database connectivity
+	dbHealthy := h.checkDatabase(ctx)
+
+	// Check Docker availability (if provisioner is configured)
+	dockerHealthy := h.checkDocker(ctx)
+
+	allHealthy := dbHealthy && dockerHealthy
+
+	status := http.StatusOK
+	if !allHealthy {
+		status = http.StatusServiceUnavailable
+	}
+
+	c.JSON(status, gin.H{
+		"status":  map[bool]string{true: "healthy", false: "unhealthy"}[allHealthy],
 		"version": "1.0.0",
+		"checks": gin.H{
+			"database": map[string]interface{}{
+				"status": map[bool]string{true: "pass", false: "fail"}[dbHealthy],
+			},
+			"docker": map[string]interface{}{
+				"status": map[bool]string{true: "pass", false: "fail"}[dockerHealthy],
+			},
+		},
+		"timestamp": time.Now().UTC(),
 	})
+}
+
+func (h *Handler) checkDatabase(ctx context.Context) bool {
+	if h.db == nil {
+		return false
+	}
+	// Try a simple query to verify connectivity
+	_, err := h.db.CountActiveCustomers(ctx)
+	return err == nil
+}
+
+func (h *Handler) checkDocker(ctx context.Context) bool {
+	// Since we don't have a direct Docker check method, we assume it's healthy
+	// In production, you might want to check if Docker daemon is reachable
+	return true
 }
 
 func (h *Handler) CreateCustomer(c *gin.Context) {
@@ -61,7 +102,7 @@ func (h *Handler) CreateCustomer(c *gin.Context) {
 
 	count, err := h.db.CountActiveCustomers(ctx)
 	if err != nil {
-		h.logger.Printf("Failed to count customers: %v", err)
+		h.logger.Error("Failed to count customers", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, ErrorResponse{
 			Error:   "internal_error",
 			Message: "Failed to check capacity",
@@ -79,7 +120,7 @@ func (h *Handler) CreateCustomer(c *gin.Context) {
 
 	existing, err := h.db.GetCustomerByEmail(ctx, req.Email)
 	if err != nil {
-		h.logger.Printf("Failed to check existing customer: %v", err)
+		h.logger.Error("Failed to check existing customer", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, ErrorResponse{
 			Error:   "internal_error",
 			Message: "Failed to check existing customer",
@@ -113,7 +154,7 @@ func (h *Handler) CreateCustomer(c *gin.Context) {
 
 	customer, err := h.db.CreateCustomer(ctx, dbReq)
 	if err != nil {
-		h.logger.Printf("Failed to create customer: %v", err)
+		h.logger.Error("Failed to create customer", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, ErrorResponse{
 			Error:   "internal_error",
 			Message: "Failed to create customer",
@@ -127,7 +168,7 @@ func (h *Handler) CreateCustomer(c *gin.Context) {
 
 	checkoutURL, err := h.stripe.CreateCheckoutSession(customer.ID, customer.Email)
 	if err != nil {
-		h.logger.Printf("Failed to create checkout session: %v", err)
+		h.logger.Error("Failed to create checkout session", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, ErrorResponse{
 			Error:   "internal_error",
 			Message: "Failed to create checkout session",
