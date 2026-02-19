@@ -1,0 +1,368 @@
+openapi: 3.0.3
+info:
+  title: BlytzCloud API
+  description: |
+    API for deploying personalized OpenClaw AI assistants.
+    Users can sign up, configure their assistant, and get a working AI assistant via Telegram.
+  version: 1.0.0
+  contact:
+    name: BlytzCloud Support
+    url: https://blytz.cloud/support
+
+servers:
+  - url: https://api.blytz.cloud
+    description: Production server
+  - url: http://localhost:8080
+    description: Development server
+
+paths:
+  /api/health:
+    get:
+      summary: Health Check
+      description: Returns the health status of the platform and its dependencies
+      operationId: healthCheck
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Platform is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: Platform is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /api/signup:
+    post:
+      summary: Create Customer
+      description: |
+        Create a new customer account with assistant configuration.
+        Rate limited to 5 requests per minute per IP.
+      operationId: createCustomer
+      tags:
+        - Customers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCustomerRequest'
+      responses:
+        '201':
+          description: Customer created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateCustomerResponse'
+          headers:
+            X-RateLimit-Limit:
+              schema:
+                type: integer
+              description: The rate limit ceiling
+            X-RateLimit-Remaining:
+              schema:
+                type: integer
+              description: The number of requests left in the current window
+        '400':
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Customer already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Platform at capacity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/status/{id}:
+    get:
+      summary: Get Customer Status
+      description: Retrieve the current status and details of a customer
+      operationId: getCustomerStatus
+      tags:
+        - Customers
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Customer ID (email-based identifier)
+          schema:
+            type: string
+            example: "user-example-com"
+      responses:
+        '200':
+          description: Customer details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        '404':
+          description: Customer not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/webhook/stripe:
+    post:
+      summary: Stripe Webhook
+      description: |
+        Receives Stripe webhook events for payment processing.
+        Rate limited to 100 requests per minute.
+      operationId: stripeWebhook
+      tags:
+        - Webhooks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Webhook processed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  received:
+                    type: boolean
+        '400':
+          description: Invalid webhook signature or payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - version
+        - checks
+        - timestamp
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy]
+          example: "healthy"
+        version:
+          type: string
+          example: "1.0.0"
+        checks:
+          type: object
+          properties:
+            database:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [pass, fail]
+                  example: "pass"
+            docker:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [pass, fail]
+                  example: "pass"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-02-19T14:50:24.964Z"
+
+    CreateCustomerRequest:
+      type: object
+      required:
+        - email
+        - assistant_name
+        - custom_instructions
+        - telegram_bot_token
+      properties:
+        email:
+          type: string
+          format: email
+          description: Customer email address
+          example: "user@example.com"
+        assistant_name:
+          type: string
+          maxLength: 50
+          description: Name for the AI assistant
+          example: "My Assistant"
+        custom_instructions:
+          type: string
+          maxLength: 5000
+          description: Custom instructions for the assistant
+          example: "You are a helpful assistant..."
+        telegram_bot_token:
+          type: string
+          description: Telegram bot token (format numbers:alphanumeric)
+          example: "123456789:ABCdefGHIjklMNOpqrSTUvwxyz"
+
+    CreateCustomerResponse:
+      type: object
+      required:
+        - customer_id
+        - email
+        - status
+        - checkout_url
+      properties:
+        customer_id:
+          type: string
+          example: "user-example-com"
+        email:
+          type: string
+          format: email
+          example: "user@example.com"
+        status:
+          type: string
+          enum: [pending, provisioning, active, suspended, cancelled]
+          example: "pending"
+        checkout_url:
+          type: string
+          format: uri
+          description: Stripe checkout URL for payment
+          example: "https://checkout.stripe.com/pay/cs_test_..."
+
+    Customer:
+      type: object
+      required:
+        - id
+        - email
+        - assistant_name
+        - custom_instructions
+        - telegram_bot_token
+        - status
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          example: "user-example-com"
+        email:
+          type: string
+          format: email
+          example: "user@example.com"
+        assistant_name:
+          type: string
+          example: "My Assistant"
+        custom_instructions:
+          type: string
+          example: "You are a helpful assistant..."
+        telegram_bot_token:
+          type: string
+          example: "123456789:ABCdefGHIjklMNOpqrSTUvwxyz"
+        telegram_bot_username:
+          type: string
+          nullable: true
+          example: "my_assistant_bot"
+        container_port:
+          type: integer
+          nullable: true
+          example: 30001
+        container_id:
+          type: string
+          nullable: true
+          example: "blytz-user-example-com"
+        status:
+          type: string
+          enum: [pending, provisioning, active, suspended, cancelled]
+          example: "active"
+        stripe_customer_id:
+          type: string
+          nullable: true
+          example: "cus_1234567890"
+        stripe_subscription_id:
+          type: string
+          nullable: true
+          example: "sub_1234567890"
+        stripe_checkout_session_id:
+          type: string
+          nullable: true
+          example: "cs_test_1234567890"
+        subscription_status:
+          type: string
+          nullable: true
+          example: "active"
+        current_period_end:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-02-19T10:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2026-02-19T10:00:00Z"
+        paid_at:
+          type: string
+          format: date-time
+          nullable: true
+        suspended_at:
+          type: string
+          format: date-time
+          nullable: true
+        cancelled_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error code
+          example: "validation_failed"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Invalid request body"
+
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for authentication (not currently required for public endpoints)
+
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: JWT token for authentication (future implementation)
+
+security:
+  - ApiKeyAuth: []

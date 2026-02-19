@@ -15,11 +15,15 @@ type DB struct {
 }
 
 func New(dbPath string) (*DB, error) {
-	conn, err := sql.Open("sqlite", dbPath)
+	// Open with WAL mode for better concurrency
+	conn, err := sql.Open("sqlite", dbPath+"?_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)&_pragma=synchronous(NORMAL)")
 	if err != nil {
 		return nil, fmt.Errorf("open database: %w", err)
 	}
 
+	// WAL mode allows concurrent reads during writes
+	// busy_timeout = wait up to 5 seconds if DB is locked
+	// synchronous = NORMAL (good balance of safety/performance)
 	conn.SetMaxOpenConns(1)
 	conn.SetMaxIdleConns(1)
 	conn.SetConnMaxLifetime(time.Hour)

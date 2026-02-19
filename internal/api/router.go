@@ -12,15 +12,16 @@ import (
 	"blytz/internal/stripe"
 )
 
-func NewRouter(database *db.DB, prov *provisioner.Service, stripeSvc *stripe.Service, stripeWebhook *stripe.WebhookHandler, cfg *config.Config, logger *zap.Logger) *gin.Engine {
+func NewRouter(database *db.DB, prov provisioner.Provisioner, stripeSvc *stripe.Service, stripeWebhook *stripe.WebhookHandler, cfg *config.Config, logger *zap.Logger) *gin.Engine {
 	router := gin.New()
 	router.Use(gin.Recovery())
 	router.Use(loggingMiddleware(logger))
 
 	handler := NewHandler(database, prov, stripeSvc, cfg, logger)
 
-	// Health check
+	// Health and status checks
 	router.GET("/api/health", handler.HealthCheck)
+	router.GET("/api/status/system", handler.SystemStatus)
 
 	// API endpoints with rate limiting
 	router.POST("/api/signup", signupRateLimit(), handler.CreateCustomer)
