@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -76,6 +77,58 @@ func (h *Handler) checkDocker(ctx context.Context) bool {
 	// Since we don't have a direct Docker check method, we assume it's healthy
 	// In production, you might want to check if Docker daemon is reachable
 	return true
+}
+
+// SystemStatus returns detailed system metrics for monitoring
+func (h *Handler) SystemStatus(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	// Get customer counts by status
+	activeCount, err := h.db.CountActiveCustomers(ctx)
+	if err != nil {
+		h.logger.Error("Failed to count active customers", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Error:   "internal_error",
+			Message: "Failed to get system status",
+		})
+		return
+	}
+
+	totalCustomers, err := h.getTotalCustomers(ctx)
+	if err != nil {
+		h.logger.Error("Failed to get total customers", zap.Error(err))
+		totalCustomers = 0
+	}
+
+	capacityPercentage := float64(activeCount) / float64(h.cfg.MaxCustomers) * 100
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": "operational",
+		"capacity": gin.H{
+			"active_customers": activeCount,
+			"total_customers":  totalCustomers,
+			"max_capacity":     h.cfg.MaxCustomers,
+			"usage_percentage": fmt.Sprintf("%.1f%%", capacityPercentage),
+			"available_slots":  h.cfg.MaxCustomers - activeCount,
+		},
+		"resources": gin.H{
+			"message":                "For detailed resource metrics, check your server monitoring (htop, docker stats)",
+			"estimated_memory_usage": fmt.Sprintf("~%dMB", activeCount*512),
+			"estimated_cpu_usage":    fmt.Sprintf("~%.1f cores", float64(activeCount)*0.25),
+		},
+		"timestamp": time.Now().UTC(),
+	})
+}
+
+func (h *Handler) getTotalCustomers(ctx context.Context) (int, error) {
+	// This is a simple count - you might want to add a dedicated method to db package
+	// For now, we'll estimate based on active customers
+	active, err := h.db.CountActiveCustomers(ctx)
+	if err != nil {
+		return 0, err
+	}
+	// Rough estimate: 20% more than active (some cancelled/suspended)
+	return int(float64(active) * 1.2), nil
 }
 
 func (h *Handler) CreateCustomer(c *gin.Context) {

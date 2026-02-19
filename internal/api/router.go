@@ -19,8 +19,9 @@ func NewRouter(database *db.DB, prov provisioner.Provisioner, stripeSvc *stripe.
 
 	handler := NewHandler(database, prov, stripeSvc, cfg, logger)
 
-	// Health check
+	// Health and status checks
 	router.GET("/api/health", handler.HealthCheck)
+	router.GET("/api/status/system", handler.SystemStatus)
 
 	// API endpoints with rate limiting
 	router.POST("/api/signup", signupRateLimit(), handler.CreateCustomer)
