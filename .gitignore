@@ -1,0 +1,68 @@
+# Binaries
+blytz
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+coverage.html
+coverage.out
+
+# Dependency directories
+vendor/
+
+# Go workspace file
+go.work
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Database files
+*.sqlite
+*.sqlite3
+*.db
+
+# Customer data
+tmp/
+customers/
+*.log
+
+# Build artifacts
+dist/
+build/
+
+# Local configuration
+config.env
+.env.production
+
+# Test databases
+test_*.db
+*_test.db
+
+# Binary
+blytz-cloud
+
+# Caddy
+Caddyfile.autosave
+
+# Node modules (if any frontend)
+node_modules/
