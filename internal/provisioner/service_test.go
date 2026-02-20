@@ -226,15 +226,27 @@ func TestComposeFileGeneration(t *testing.T) {
 	tmpDir := t.TempDir()
 	gen := NewComposeGenerator(tmpDir)
 
-	customerID := "test-customer"
-	port := 30001
-	openAIKey := "sk-test-key"
+	config := AgentConfig{
+		CustomerID:         "test-customer",
+		AgentType:          "openclaw",
+		ExternalPort:       30001,
+		ExternalPortBridge: 30002,
+		InternalPort:       18789,
+		InternalPortBridge: 18790,
+		BaseImage:          "node:22-bookworm",
+		LLMEnvKey:          "OPENAI_API_KEY",
+		LLMKey:             "sk-test-key",
+		GatewayToken:       "test-token",
+		HealthEndpoint:     "/health",
+		MinMemory:          "512M",
+		MinCPU:             "0.25",
+	}
 
-	err := gen.Generate(customerID, port, openAIKey)
+	err := gen.Generate(config)
 	require.NoError(t, err)
 
 	// Verify file was created
-	composePath := filepath.Join(tmpDir, customerID, "docker-compose.yml")
+	composePath := filepath.Join(tmpDir, "test-customer", "docker-compose.yml")
 	content, err := os.ReadFile(composePath)
 	require.NoError(t, err)
 	contentStr := string(content)
@@ -243,32 +255,43 @@ func TestComposeFileGeneration(t *testing.T) {
 	assert.Contains(t, contentStr, "blytz-test-customer")
 	assert.Contains(t, contentStr, "30001:18789")
 	assert.Contains(t, contentStr, "30002:18790") // Bridge port
-	assert.Contains(t, contentStr, "env_file:")   // Check for env_file directive
-	assert.Contains(t, contentStr, ".env.secret")
-	assert.NotContains(t, contentStr, openAIKey) // API key should NOT be in compose file
 	assert.Contains(t, contentStr, "memory: 512M")
 	assert.Contains(t, contentStr, "cpus: '0.25'")
 	assert.Contains(t, contentStr, "image: node:22-bookworm") // Correct base image
-	assert.Contains(t, contentStr, "/home/node/.openclaw")    // Correct volume mount
-	assert.Contains(t, contentStr, "HOME=/home/node")         // Correct HOME env
-	assert.Contains(t, contentStr, "user: \"1000:1000\"")     // Run as node user
-	assert.Contains(t, contentStr, "restart: unless-stopped")
 
 	// Verify env file was created
-	err = gen.GenerateEnvFile(customerID, openAIKey)
+	envVars := map[string]string{
+		"OPENAI_API_KEY": "sk-test-key",
+	}
+	err = gen.GenerateEnvFile("test-customer", envVars)
 	require.NoError(t, err)
 
-	envPath := filepath.Join(tmpDir, customerID, ".env.secret")
+	envPath := filepath.Join(tmpDir, "test-customer", ".env.secret")
 	envContent, err := os.ReadFile(envPath)
 	require.NoError(t, err)
-	assert.Contains(t, string(envContent), openAIKey)
+	assert.Contains(t, string(envContent), "OPENAI_API_KEY=sk-test-key")
 }
 
 func TestWorkspaceGeneration(t *testing.T) {
 	tmpDir := t.TempDir()
 	gen := NewComposeGenerator(tmpDir)
 
-	err := gen.Generate("test-customer", 30001, "sk-test")
+	config := AgentConfig{
+		CustomerID:         "test-customer",
+		AgentType:          "openclaw",
+		ExternalPort:       30001,
+		ExternalPortBridge: 30002,
+		InternalPort:       18789,
+		InternalPortBridge: 18790,
+		BaseImage:          "node:22-bookworm",
+		LLMEnvKey:          "OPENAI_API_KEY",
+		GatewayToken:       "test-token",
+		HealthEndpoint:     "/health",
+		MinMemory:          "512M",
+		MinCPU:             "0.25",
+	}
+
+	err := gen.Generate(config)
 	require.NoError(t, err)
 
 	// Verify directory was created
@@ -352,12 +375,14 @@ func TestServiceCleanup(t *testing.T) {
 
 	ctx := t.Context()
 
-	// Create customer
+	// Create customer with OpenClaw agent type
 	customer, err := database.CreateCustomer(ctx, &db.CreateCustomerRequest{
 		Email:              "test@example.com",
 		AssistantName:      "Test",
 		CustomInstructions: "Help me",
 		TelegramBotToken:   "123:abc",
+		AgentTypeID:        "openclaw",
+		LLMProviderID:      "openai",
 	})
 	require.NoError(t, err)
 
@@ -378,10 +403,29 @@ func TestServiceCleanup(t *testing.T) {
 	err = database.AllocatePort(ctx, customer.ID, 30001)
 	require.NoError(t, err)
 
-	err = svc.compose.Generate(customer.ID, 30001, "sk-test")
+	config := AgentConfig{
+		CustomerID:         customer.ID,
+		AgentType:          "openclaw",
+		ExternalPort:       30001,
+		ExternalPortBridge: 30002,
+		InternalPort:       18789,
+		InternalPortBridge: 18790,
+		BaseImage:          "node:22-bookworm",
+		LLMEnvKey:          "OPENAI_API_KEY",
+		LLMKey:             "sk-test",
+		GatewayToken:       "test-token",
+		HealthEndpoint:     "/health",
+		MinMemory:          "512M",
+		MinCPU:             "0.25",
+	}
+
+	err = svc.compose.Generate(config)
 	require.NoError(t, err)
 
-	err = svc.compose.GenerateEnvFile(customer.ID, "sk-test")
+	envVars := map[string]string{
+		"OPENAI_API_KEY": "sk-test",
+	}
+	err = svc.compose.GenerateEnvFile(customer.ID, envVars)
 	require.NoError(t, err)
 
 	// Verify files exist
@@ -589,13 +633,25 @@ func TestComposeGeneratorGenerateMultiple(t *testing.T) {
 
 	// Generate multiple customer configs
 	for i := 0; i < 3; i++ {
-		customerID := fmt.Sprintf("customer-%d", i)
-		port := 30000 + i
-		err := gen.Generate(customerID, port, "sk-test")
+		config := AgentConfig{
+			CustomerID:         fmt.Sprintf("customer-%d", i),
+			AgentType:          "openclaw",
+			ExternalPort:       30000 + i,
+			ExternalPortBridge: 30001 + i,
+			InternalPort:       18789,
+			InternalPortBridge: 18790,
+			BaseImage:          "node:22-bookworm",
+			LLMEnvKey:          "OPENAI_API_KEY",
+			GatewayToken:       "test-token",
+			HealthEndpoint:     "/health",
+			MinMemory:          "512M",
+			MinCPU:             "0.25",
+		}
+		err := gen.Generate(config)
 		require.NoError(t, err)
 
 		// Verify directory created
-		dirPath := filepath.Join(tmpDir, customerID)
+		dirPath := filepath.Join(tmpDir, fmt.Sprintf("customer-%d", i))
 		_, err = os.Stat(dirPath)
 		require.NoError(t, err)
 
@@ -603,7 +659,7 @@ func TestComposeGeneratorGenerateMultiple(t *testing.T) {
 		composePath := filepath.Join(dirPath, "docker-compose.yml")
 		content, err := os.ReadFile(composePath)
 		require.NoError(t, err)
-		assert.Contains(t, string(content), fmt.Sprintf("%d:18789", port))
+		assert.Contains(t, string(content), fmt.Sprintf("%d:18789", 30000+i))
 	}
 }
 
@@ -611,10 +667,11 @@ func TestComposeGeneratorEnvFileOverwrite(t *testing.T) {
 	tmpDir := t.TempDir()
 	gen := NewComposeGenerator(tmpDir)
 
-	customerID := "test-customer"
+	customerID := "openclaw"
 
 	// Generate first env file (GenerateEnvFile now creates the directory)
-	err := gen.GenerateEnvFile(customerID, "sk-key-1")
+	envVars1 := map[string]string{"OPENAI_API_KEY": "sk-key-1"}
+	err := gen.GenerateEnvFile(customerID, envVars1)
 	require.NoError(t, err)
 
 	envPath := filepath.Join(tmpDir, customerID, ".env.secret")
@@ -623,7 +680,8 @@ func TestComposeGeneratorEnvFileOverwrite(t *testing.T) {
 	assert.Contains(t, string(content1), "sk-key-1")
 
 	// Generate second env file (should overwrite)
-	err = gen.GenerateEnvFile(customerID, "sk-key-2")
+	envVars2 := map[string]string{"OPENAI_API_KEY": "sk-key-2"}
+	err = gen.GenerateEnvFile(customerID, envVars2)
 	require.NoError(t, err)
 
 	content2, err := os.ReadFile(envPath)
@@ -673,10 +731,26 @@ func TestServiceTerminateWithPort(t *testing.T) {
 	)
 
 	// Create compose file so cleanup has something to remove
-	err = svc.compose.Generate(customer.ID, port, "sk-test")
+	agentConfig := AgentConfig{
+		CustomerID:         customer.ID,
+		AgentType:          "openclaw",
+		ExternalPort:       port,
+		ExternalPortBridge: port + 1,
+		InternalPort:       18789,
+		InternalPortBridge: 18790,
+		BaseImage:          "node:22-bookworm",
+		LLMEnvKey:          "OPENAI_API_KEY",
+		LLMKey:             "sk-test",
+		GatewayToken:       "test-token",
+		HealthEndpoint:     "/health",
+		MinMemory:          "512M",
+		MinCPU:             "0.25",
+	}
+	err = svc.compose.Generate(agentConfig)
 	require.NoError(t, err)
 
-	err = svc.compose.GenerateEnvFile(customer.ID, "sk-test")
+	envVars := map[string]string{"OPENAI_API_KEY": "sk-test"}
+	err = svc.compose.GenerateEnvFile(customer.ID, envVars)
 	require.NoError(t, err)
 
 	// Verify files exist

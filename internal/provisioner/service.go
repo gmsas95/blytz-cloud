@@ -103,6 +103,7 @@ func (s *Service) Provision(ctx context.Context, customerID string) error {
 	gatewayToken := generateGatewayToken()
 	agentConfig := AgentConfig{
 		CustomerID:         customerID,
+		AgentType:          customer.AgentTypeID,
 		ExternalPort:       port,
 		ExternalPortBridge: port + 1,
 		InternalPort:       agentType.InternalPort,

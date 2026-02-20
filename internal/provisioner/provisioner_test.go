@@ -51,7 +51,23 @@ func TestComposeGenerator(t *testing.T) {
 	tmpDir := t.TempDir()
 	generator := NewComposeGenerator(tmpDir)
 
-	err := generator.Generate("test-customer", 30001, "sk-test-key")
+	config := AgentConfig{
+		CustomerID:         "test-customer",
+		AgentType:          "openclaw",
+		ExternalPort:       30001,
+		ExternalPortBridge: 30002,
+		InternalPort:       18789,
+		InternalPortBridge: 18790,
+		BaseImage:          "node:22-bookworm",
+		LLMEnvKey:          "OPENAI_API_KEY",
+		LLMKey:             "sk-test-key",
+		GatewayToken:       "test-token",
+		HealthEndpoint:     "/health",
+		MinMemory:          "512M",
+		MinCPU:             "0.25",
+	}
+
+	err := generator.Generate(config)
 	if err != nil {
 		t.Fatalf("Generate failed: %v", err)
 	}

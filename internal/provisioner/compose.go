@@ -16,6 +16,7 @@ type ComposeGenerator struct {
 // AgentConfig contains configuration for generating compose files
 type AgentConfig struct {
 	CustomerID         string
+	AgentType          string // "openclaw", "myrai", etc.
 	ExternalPort       int
 	ExternalPortBridge int
 	InternalPort       int
@@ -120,9 +121,9 @@ func NewComposeGenerator(baseDir string) *ComposeGenerator {
 
 // Generate creates a docker-compose.yml for the specified agent type
 func (cg *ComposeGenerator) Generate(config AgentConfig) error {
-	templateStr, ok := AgentTemplates[config.CustomerID]
+	templateStr, ok := AgentTemplates[config.AgentType]
 	if !ok {
-		return fmt.Errorf("unknown agent type: %s", config.CustomerID)
+		return fmt.Errorf("unknown agent type: %s", config.AgentType)
 	}
 
 	tmpl, err := template.New("compose").Parse(templateStr)
