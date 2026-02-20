@@ -1,0 +1,89 @@
+version: '3.8'
+
+services:
+  # Go Backend API
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: blytz-backend
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/data
+      - ./customers:/customers
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - DATABASE_PATH=/data/database.sqlite
+      - CUSTOMERS_DIR=/customers
+      - TEMPLATES_DIR=/app/internal/workspace/templates
+      - MAX_CUSTOMERS=${MAX_CUSTOMERS:-20}
+      - PORT_RANGE_START=${PORT_RANGE_START:-30000}
+      - PORT_RANGE_END=${PORT_RANGE_END:-30020}
+      - BASE_DOMAIN=${BASE_DOMAIN:-localhost}
+      - PLATFORM_PORT=8080
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      - STRIPE_PRICE_ID=${STRIPE_PRICE_ID}
+      - CADDY_ADMIN_URL=http://caddy:2019
+    networks:
+      - blytz-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Next.js Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.frontend
+    container_name: blytz-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - NEXT_PUBLIC_API_URL=http://backend:8080
+    networks:
+      - blytz-network
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Caddy Reverse Proxy
+  caddy:
+    image: caddy:2-alpine
+    container_name: blytz-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "2019:2019"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - blytz-network
+    depends_on:
+      - frontend
+      - backend
+
+networks:
+  blytz-network:
+    driver: bridge
+
+volumes:
+  caddy-data:
+  caddy-config:
