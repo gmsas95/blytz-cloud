@@ -474,8 +474,8 @@ func (db *DB) logAudit(ctx context.Context, customerID, action string, details i
 
 // GetAgentTypes returns all active agent types
 func (db *DB) GetAgentTypes(ctx context.Context) ([]AgentType, error) {
-	query := `SELECT id, name, description, language, base_image, internal_port, internal_port_bridge, 
-			health_endpoint, min_memory, min_cpu, config_template, env_vars, is_active, created_at 
+	query := `SELECT id, name, description, language, base_image, internal_port, internal_port_bridge,
+			health_endpoint, min_memory, min_cpu, COALESCE(config_template, ''), COALESCE(env_vars, ''), is_active, created_at
 			FROM agent_types WHERE is_active = true ORDER BY name`
 
 	rows, err := db.conn.QueryContext(ctx, query)
@@ -504,8 +504,8 @@ func (db *DB) GetAgentTypes(ctx context.Context) ([]AgentType, error) {
 
 // GetAgentType returns a specific agent type by ID
 func (db *DB) GetAgentType(ctx context.Context, id string) (*AgentType, error) {
-	query := `SELECT id, name, description, language, base_image, internal_port, internal_port_bridge, 
-			health_endpoint, min_memory, min_cpu, config_template, env_vars, is_active, created_at 
+	query := `SELECT id, name, description, language, base_image, internal_port, internal_port_bridge,
+			health_endpoint, min_memory, min_cpu, COALESCE(config_template, ''), COALESCE(env_vars, ''), is_active, created_at
 			FROM agent_types WHERE id = ? AND is_active = true`
 
 	row := db.conn.QueryRowContext(ctx, query, id)
