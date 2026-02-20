@@ -242,11 +242,16 @@ func TestComposeFileGeneration(t *testing.T) {
 	// Verify key components
 	assert.Contains(t, contentStr, "blytz-test-customer")
 	assert.Contains(t, contentStr, "30001:18789")
-	assert.Contains(t, contentStr, "env_file:") // Check for env_file directive
+	assert.Contains(t, contentStr, "30002:18790") // Bridge port
+	assert.Contains(t, contentStr, "env_file:")   // Check for env_file directive
 	assert.Contains(t, contentStr, ".env.secret")
 	assert.NotContains(t, contentStr, openAIKey) // API key should NOT be in compose file
-	assert.Contains(t, contentStr, "memory: 1G")
-	assert.Contains(t, contentStr, "cpus: '0.5'")
+	assert.Contains(t, contentStr, "memory: 512M")
+	assert.Contains(t, contentStr, "cpus: '0.25'")
+	assert.Contains(t, contentStr, "image: node:22-bookworm") // Correct base image
+	assert.Contains(t, contentStr, "/home/node/.openclaw")    // Correct volume mount
+	assert.Contains(t, contentStr, "HOME=/home/node")         // Correct HOME env
+	assert.Contains(t, contentStr, "user: \"1000:1000\"")     // Run as node user
 	assert.Contains(t, contentStr, "restart: unless-stopped")
 
 	// Verify env file was created

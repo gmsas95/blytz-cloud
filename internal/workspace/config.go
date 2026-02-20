@@ -16,15 +16,15 @@ func GenerateOpenClawConfig(baseDir, customerID string, botToken string, gateway
   },
   "agents": {
     "defaults": {
-      "workspace": "/root/.openclaw/workspace"
+      "workspace": "/home/node/.openclaw/workspace"
     }
   },
   "channels": {
     "telegram": {
       "enabled": true,
       "botToken": "%s",
-      "dmPolicy": "open",
-      "allowFrom": ["*"]
+      "dmPolicy": "pairing",
+      "allowFrom": []
     }
   }
 }`, gatewayToken, botToken)

@@ -18,18 +18,24 @@ func (cg *ComposeGenerator) Generate(customerID string, port int, openAIKey stri
 	compose := fmt.Sprintf(`version: '3.8'
 services:
   openclaw:
-    image: node:22-alpine
+    image: node:22-bookworm
     container_name: blytz-%s
     working_dir: /app
-    command: sh -c "npm install -g openclaw@latest && openclaw gateway --port 18789"
+    user: "1000:1000"
+    command: >
+      sh -c "npm install -g openclaw@latest &&
+             mkdir -p /home/node/.openclaw &&
+             openclaw gateway --port 18789 --bind lan"
     ports:
       - "%d:18789"
+      - "%d:18790"
     volumes:
-      - ./.openclaw:/root/.openclaw
+      - ./.openclaw:/home/node/.openclaw
     env_file:
       - .env.secret
     environment:
-      - OPENCLAW_STATE_DIR=/root/.openclaw
+      - HOME=/home/node
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
     deploy:
       resources:
         limits:
@@ -50,7 +56,7 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-`, customerID, port)
+`, customerID, port, port+1)
 
 	customerDir := filepath.Join(cg.baseDir, customerID)
 	if err := os.MkdirAll(customerDir, 0755); err != nil {
