@@ -61,6 +61,20 @@ func (s *Service) Provision(ctx context.Context, customerID string) error {
 		return fmt.Errorf("update status to provisioning: %w", err)
 	}
 
+	// Get agent type configuration
+	agentType, err := s.db.GetAgentType(ctx, customer.AgentTypeID)
+	if err != nil {
+		s.db.UpdateCustomerStatus(ctx, customerID, "pending")
+		return fmt.Errorf("get agent type: %w", err)
+	}
+
+	// Get LLM provider configuration
+	llmProvider, err := s.db.GetLLMProvider(ctx, customer.LLMProviderID)
+	if err != nil {
+		s.db.UpdateCustomerStatus(ctx, customerID, "pending")
+		return fmt.Errorf("get llm provider: %w", err)
+	}
+
 	if err := s.workspace.Generate(customerID, customer.AssistantName, customer.CustomInstructions); err != nil {
 		s.db.UpdateCustomerStatus(ctx, customerID, "pending")
 		return fmt.Errorf("generate workspace: %w", err)
@@ -85,22 +99,50 @@ func (s *Service) Provision(ctx context.Context, customerID string) error {
 		return fmt.Errorf("update customer port: %w", err)
 	}
 
-	if err := s.compose.GenerateEnvFile(customerID, s.openAIKey); err != nil {
+	// Build agent configuration
+	gatewayToken := generateGatewayToken()
+	agentConfig := AgentConfig{
+		CustomerID:         customerID,
+		ExternalPort:       port,
+		ExternalPortBridge: port + 1,
+		InternalPort:       agentType.InternalPort,
+		InternalPortBridge: agentType.InternalPortBridge,
+		BaseImage:          agentType.BaseImage,
+		LLMEnvKey:          llmProvider.EnvKey,
+		LLMKey:             s.openAIKey,
+		GatewayToken:       gatewayToken,
+		HealthEndpoint:     agentType.HealthEndpoint,
+		MinMemory:          agentType.MinMemory,
+		MinCPU:             agentType.MinCPU,
+	}
+
+	// Generate environment variables map
+	envVars := map[string]string{
+		llmProvider.EnvKey: s.openAIKey,
+	}
+	if customer.AgentTypeID == "myrai" {
+		envVars["MYRAI_GATEWAY_TOKEN"] = gatewayToken
+	}
+
+	if err := s.compose.GenerateEnvFile(customerID, envVars); err != nil {
 		s.cleanup(customerID, port)
 		s.db.UpdateCustomerStatus(ctx, customerID, "pending")
 		return fmt.Errorf("generate env file: %w", err)
 	}
 
-	if err := s.compose.Generate(customerID, port, s.openAIKey); err != nil {
+	if err := s.compose.Generate(agentConfig); err != nil {
 		s.cleanup(customerID, port)
 		s.db.UpdateCustomerStatus(ctx, customerID, "pending")
 		return fmt.Errorf("generate compose: %w", err)
 	}
 
-	if err := workspace.GenerateOpenClawConfig(s.baseDir, customerID, customer.TelegramBotToken, generateGatewayToken(), port); err != nil {
-		s.cleanup(customerID, port)
-		s.db.UpdateCustomerStatus(ctx, customerID, "pending")
-		return fmt.Errorf("generate openclaw config: %w", err)
+	// Generate agent-specific config
+	if customer.AgentTypeID == "openclaw" {
+		if err := workspace.GenerateOpenClawConfig(s.baseDir, customerID, customer.TelegramBotToken, gatewayToken, port); err != nil {
+			s.cleanup(customerID, port)
+			s.db.UpdateCustomerStatus(ctx, customerID, "pending")
+			return fmt.Errorf("generate openclaw config: %w", err)
+		}
 	}
 
 	if err := s.docker.Create(ctx, customerID); err != nil {
