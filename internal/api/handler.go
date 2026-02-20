@@ -207,6 +207,9 @@ func (h *Handler) CreateCustomer(c *gin.Context) {
 		AssistantName:      req.AssistantName,
 		CustomInstructions: req.CustomInstructions,
 		TelegramBotToken:   req.TelegramBotToken,
+		AgentTypeID:        req.AgentTypeID,
+		LLMProviderID:      req.LLMProviderID,
+		LLMAPIKey:          req.LLMAPIKey,
 	}
 
 	customer, err := h.db.CreateCustomer(ctx, dbReq)
@@ -261,6 +264,10 @@ type CreateCustomerRequest struct {
 	AssistantName      string `json:"assistant_name" binding:"required"`
 	CustomInstructions string `json:"custom_instructions" binding:"required"`
 	TelegramBotToken   string `json:"telegram_bot_token" binding:"required"`
+	// Marketplace fields
+	AgentTypeID   string `json:"agent_type_id"`   // e.g., "openclaw", "myrai"
+	LLMProviderID string `json:"llm_provider_id"` // e.g., "openai", "anthropic"
+	LLMAPIKey     string `json:"llm_api_key"`     // The actual API key
 }
 
 type CreateCustomerResponse struct {
