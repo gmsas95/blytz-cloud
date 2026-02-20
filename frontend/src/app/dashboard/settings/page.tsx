@@ -46,8 +46,7 @@ export default function SettingsPage() {
             <div>
               <label className="block text-sm font-medium mb-2">
                 Telegram Bot Token
-                <a href="https://t.me/botfather" target="_blank" className="text-blue-400 hover:text-blue-300 ml-2 text-xs"
-003e
+                <a href="https://t.me/botfather" target="_blank" className="text-blue-400 hover:text-blue-300 ml-2 text-xs">
                   Get from @BotFather →
                 </a>
               </label>
@@ -89,7 +88,7 @@ export default function SettingsPage() {
                 <p className="font-medium">Current Domain</p>
                 <p className="text-zinc-400">demo.blytz.cloud</p>
               </div>
-              <span className="px-3 py-1 bg-green-500/10 text-green-400 text-sm rounded-full">
+              <span className="px-3 py-1 bg-amber-500/10 text-amber-400 text-sm rounded-full">
                 Active
               </span>
             </div>

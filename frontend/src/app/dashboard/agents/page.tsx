@@ -43,7 +43,7 @@ export default function AgentsPage() {
                 <h3 className="font-semibold text-lg">{agent.name}</h3>
                 <div className="flex items-center gap-4 text-sm text-zinc-400">
                   <span className="flex items-center gap-1">
-                    <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                    <span className="w-2 h-2 bg-amber-500 rounded-full"></span>
                     {agent.status}
                   </span>
                   <span>{agent.framework}</span>

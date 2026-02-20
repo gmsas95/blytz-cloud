@@ -25,7 +25,7 @@ export default function BillingPage() {
               </div>
             </div>
 
-            <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg mb-6">
+            <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg mb-6">
               <p className="text-green-400">✓ Your subscription is active</p>
             </div>
 
@@ -39,7 +39,7 @@ export default function BillingPage() {
                 'Automatic updates'
               ].map((feature) => (
                 <div key={feature} className="flex items-center gap-3 text-zinc-300">
-                  <Check className="w-5 h-5 text-green-500" />
+                  <Check className="w-5 h-5 text-amber-500" />
                   {feature}
                 </div>
               ))}
@@ -82,7 +82,7 @@ export default function BillingPage() {
                     <p className="text-sm text-zinc-400">{invoice.amount}</p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="px-2 py-1 bg-green-500/10 text-green-400 text-xs rounded-full">
+                    <span className="px-2 py-1 bg-amber-500/10 text-green-400 text-xs rounded-full">
                       {invoice.status}
                     </span>
                     <button className="p-2 hover:bg-zinc-700 rounded-lg transition-colors">
