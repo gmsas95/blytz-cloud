@@ -94,10 +94,10 @@ export default function DashboardPage() {
     <div className="min-h-screen">
       {/* Header */}
       <header className="mb-8">
-        <div className="flex items-end justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-1">Dashboard</h1>
-            <p className="text-white/40">Welcome back. Your agent is {agent.status}.</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1">Dashboard</h1>
+            <p className="text-white/40 text-sm sm:text-base">Welcome back. Your agent is {agent.status}.</p>
           </div>
           <div className="flex items-center gap-3">
             <Link
@@ -120,16 +120,16 @@ export default function DashboardPage() {
         {/* Glow effect */}
         <div className="absolute -inset-1 bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/20 rounded-2xl blur-xl opacity-50" />
         
-        <div className="relative bg-gradient-to-br from-white/[0.08] to-white/[0.02] backdrop-blur-xl border border-white/[0.1] rounded-2xl p-8 overflow-hidden">
+        <div className="relative bg-gradient-to-br from-white/[0.08] to-white/[0.02] backdrop-blur-xl border border-white/[0.1] rounded-2xl p-4 sm:p-6 lg:p-8 overflow-hidden">
           {/* Background pattern */}
           <div className="absolute inset-0 opacity-30">
             <div className="absolute top-0 right-0 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
             <div className="absolute bottom-0 left-0 w-64 h-64 bg-orange-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
           </div>
 
-          <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+          <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-6 lg:gap-8">
             {/* Agent Info */}
-            <div className="flex items-center gap-6">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
               {/* Status indicator */}
               <div className="relative">
                 <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${
@@ -174,7 +174,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Quick Actions */}
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <button
                 onClick={toggleAgent}
                 disabled={isLoading}
@@ -209,32 +209,32 @@ export default function DashboardPage() {
           </div>
 
           {/* Stats Row */}
-          <div className="relative mt-8 pt-8 border-t border-white/[0.06]">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+          <div className="relative mt-6 sm:mt-8 pt-6 sm:pt-8 border-t border-white/[0.06]">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
               <div>
-                <p className="text-white/40 text-sm mb-1">Messages Today</p>
-                <p className="text-3xl font-bold text-white">{agent.messagesToday}</p>
+                <p className="text-white/40 text-xs sm:text-sm mb-1">Messages Today</p>
+                <p className="text-2xl sm:text-3xl font-bold text-white">{agent.messagesToday}</p>
                 <div className="flex items-center gap-1 mt-1 text-emerald-400 text-xs">
                   <TrendingUp className="w-3 h-3" />
-                  <span>+12% from yesterday</span>
+                  <span>+12%</span>
                 </div>
               </div>
 
               <div>
-                <p className="text-white/40 text-sm mb-1">Total Messages</p>
-                <p className="text-3xl font-bold text-white">{agent.messagesTotal.toLocaleString()}</p>
+                <p className="text-white/40 text-xs sm:text-sm mb-1">Total Messages</p>
+                <p className="text-2xl sm:text-3xl font-bold text-white">{agent.messagesTotal.toLocaleString()}</p>
                 <p className="text-white/30 text-xs mt-1">All time</p>
               </div>
 
               <div>
-                <p className="text-white/40 text-sm mb-1">Last Active</p>
-                <p className="text-3xl font-bold text-white">{agent.lastActive}</p>
-                <p className="text-white/30 text-xs mt-1">Processing requests</p>
+                <p className="text-white/40 text-xs sm:text-sm mb-1">Last Active</p>
+                <p className="text-2xl sm:text-3xl font-bold text-white">{agent.lastActive}</p>
+                <p className="text-white/30 text-xs mt-1">Processing</p>
               </div>
 
               <div>
-                <p className="text-white/40 text-sm mb-1">Response Time</p>
-                <p className="text-3xl font-bold text-white">1.2s</p>
+                <p className="text-white/40 text-xs sm:text-sm mb-1">Response Time</p>
+                <p className="text-2xl sm:text-3xl font-bold text-white">1.2s</p>
                 <p className="text-white/30 text-xs mt-1">Average</p>
               </div>
             </div>
@@ -243,7 +243,7 @@ export default function DashboardPage() {
       </motion.div>
 
       {/* Bottom Grid */}
-      <div className="grid lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Activity */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -265,16 +265,16 @@ export default function DashboardPage() {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.1 + index * 0.05 }}
-                className="flex items-center gap-4 p-4 bg-white/[0.03] hover:bg-white/[0.05] border border-white/[0.06] rounded-xl transition-colors group"
+                className="flex items-start sm:items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/[0.03] hover:bg-white/[0.05] border border-white/[0.06] rounded-xl transition-colors group"
               >
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${getActivityColor(item.type)}`}>
+                <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center border flex-shrink-0 ${getActivityColor(item.type)}`}>
                   {getActivityIcon(item.type)}
                 </div>
-                <div className="flex-1">
-                  <p className="text-white font-medium">{item.action}</p>
-                  <p className="text-white/40 text-sm">{item.timestamp}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-white font-medium text-sm sm:text-base truncate">{item.action}</p>
+                  <p className="text-white/40 text-xs sm:text-sm">{item.timestamp}</p>
                 </div>
-                <button className="opacity-0 group-hover:opacity-100 p-2 text-white/40 hover:text-white transition-all">
+                <button className="opacity-0 group-hover:opacity-100 p-2 text-white/40 hover:text-white transition-all flex-shrink-0">
                   <MoreHorizontal className="w-5 h-5" />
                 </button>
               </motion.div>
@@ -293,59 +293,59 @@ export default function DashboardPage() {
           <div className="space-y-3">
             <Link
               href="/dashboard/settings"
-              className="flex items-center gap-4 p-4 bg-white/[0.03] hover:bg-white/[0.05] border border-white/[0.06] rounded-xl transition-all group"
+              className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/[0.03] hover:bg-white/[0.05] border border-white/[0.06] rounded-xl transition-all group"
             >
-              <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
-                <Settings className="w-5 h-5 text-amber-400" />
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center flex-shrink-0">
+                <Settings className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400" />
               </div>
-              <div className="flex-1">
-                <p className="text-white font-medium">Configure Agent</p>
-                <p className="text-white/40 text-sm">Update settings & prompts</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-white font-medium text-sm sm:text-base truncate">Configure Agent</p>
+                <p className="text-white/40 text-xs sm:text-sm">Update settings & prompts</p>
               </div>
-              <ChevronRight className="w-5 h-5 text-white/20 group-hover:text-white/60 transition-colors" />
+              <ChevronRight className="w-5 h-5 text-white/20 group-hover:text-white/60 transition-colors flex-shrink-0" />
             </Link>
 
             <a
               href={`https://${agent.domain}`}
               target="_blank"
-              className="flex items-center gap-4 p-4 bg-white/[0.03] hover:bg-white/[0.05] border border-white/[0.06] rounded-xl transition-all group"
+              className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/[0.03] hover:bg-white/[0.05] border border-white/[0.06] rounded-xl transition-all group"
             >
-              <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
-                <ExternalLink className="w-5 h-5 text-blue-400" />
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center flex-shrink-0">
+                <ExternalLink className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
               </div>
-              <div className="flex-1">
-                <p className="text-white font-medium">Open Agent UI</p>
-                <p className="text-white/40 text-sm">View your public agent</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-white font-medium text-sm sm:text-base truncate">Open Agent UI</p>
+                <p className="text-white/40 text-xs sm:text-sm">View your public agent</p>
               </div>
-              <ChevronRight className="w-5 h-5 text-white/20 group-hover:text-white/60 transition-colors" />
+              <ChevronRight className="w-5 h-5 text-white/20 group-hover:text-white/60 transition-colors flex-shrink-0" />
             </a>
 
             <Link
               href="/dashboard/agents"
-              className="flex items-center gap-4 p-4 bg-white/[0.03] hover:bg-white/[0.05] border border-white/[0.06] rounded-xl transition-all group"
+              className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/[0.03] hover:bg-white/[0.05] border border-white/[0.06] rounded-xl transition-all group"
             >
-              <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
-                <RotateCcw className="w-5 h-5 text-purple-400" />
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center flex-shrink-0">
+                <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400" />
               </div>
-              <div className="flex-1">
-                <p className="text-white font-medium">View Logs</p>
-                <p className="text-white/40 text-sm">Check agent activity</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-white font-medium text-sm sm:text-base truncate">View Logs</p>
+                <p className="text-white/40 text-xs sm:text-sm">Check agent activity</p>
               </div>
-              <ChevronRight className="w-5 h-5 text-white/20 group-hover:text-white/60 transition-colors" />
+              <ChevronRight className="w-5 h-5 text-white/20 group-hover:text-white/60 transition-colors flex-shrink-0" />
             </Link>
 
             <Link
               href="/dashboard/billing"
-              className="flex items-center gap-4 p-4 bg-white/[0.03] hover:bg-white/[0.05] border border-white/[0.06] rounded-xl transition-all group"
+              className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-white/[0.03] hover:bg-white/[0.05] border border-white/[0.06] rounded-xl transition-all group"
             >
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-                <FileText className="w-5 h-5 text-emerald-400" />
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center flex-shrink-0">
+                <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400" />
               </div>
-              <div className="flex-1">
-                <p className="text-white font-medium">Billing</p>
-                <p className="text-white/40 text-sm">Manage subscription</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-white font-medium text-sm sm:text-base truncate">Billing</p>
+                <p className="text-white/40 text-xs sm:text-sm">Manage subscription</p>
               </div>
-              <ChevronRight className="w-5 h-5 text-white/20 group-hover:text-white/60 transition-colors" />
+              <ChevronRight className="w-5 h-5 text-white/20 group-hover:text-white/60 transition-colors flex-shrink-0" />
             </Link>
           </div>
 
