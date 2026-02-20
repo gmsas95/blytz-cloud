@@ -18,10 +18,18 @@ func NewRouter(database *db.DB, prov provisioner.Provisioner, stripeSvc *stripe.
 	router.Use(loggingMiddleware(logger))
 
 	handler := NewHandler(database, prov, stripeSvc, cfg, logger)
+	marketplaceHandler := NewMarketplaceHandler(database, logger)
 
 	// Health and status checks
 	router.GET("/api/health", handler.HealthCheck)
 	router.GET("/api/status/system", handler.SystemStatus)
+
+	// Marketplace endpoints
+	router.GET("/api/marketplace/agents", marketplaceHandler.ListAgents)
+	router.GET("/api/marketplace/agents/:id", marketplaceHandler.GetAgent)
+	router.GET("/api/marketplace/llm-providers", marketplaceHandler.ListLLMProviders)
+	router.GET("/api/marketplace/llm-providers/:id", marketplaceHandler.GetLLMProvider)
+	router.GET("/api/marketplace/stacks", marketplaceHandler.GetStacks)
 
 	// API endpoints with rate limiting
 	router.POST("/api/signup", signupRateLimit(), handler.CreateCustomer)
