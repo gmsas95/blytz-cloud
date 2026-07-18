@@ -1,3 +1,12 @@
+---
+type: guide
+title: 30-User Deployment Guide
+resource: blytz-cloud
+description: "**Hardware:** Ryzen 7 5700x + 32GB RAM"
+tags: [deployment, docker, go, postgresql, redis, stripe]
+updated: 2026-06-18
+---
+
 # 30-User Deployment Guide
 
 **Hardware:** Ryzen 7 5700x + 32GB RAM  

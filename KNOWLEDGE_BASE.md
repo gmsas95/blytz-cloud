@@ -1,3 +1,12 @@
+---
+type: guide
+title: Knowledge Base References for BlytzCloud
+resource: blytz-cloud
+description: "| Resource | URL |"
+tags: [docker, go, stripe]
+updated: 2026-06-18
+---
+
 # Knowledge Base References for BlytzCloud
 
 ## Framework References

@@ -1,3 +1,12 @@
+---
+type: readme
+title: Blytz Cloud
+resource: blytz-cloud
+description: "Platform for deploying personalized OpenClaw AI assistants. Users sign up, configure their assistant, pay $29/month, and get a working AI assistant within 2 minutes via Telegram."
+tags: [docker, go, stripe]
+updated: 2026-06-18
+---
+
 # Blytz Cloud
 
 Platform for deploying personalized OpenClaw AI assistants. Users sign up, configure their assistant, pay $29/month, and get a working AI assistant within 2 minutes via Telegram.

@@ -1,3 +1,12 @@
+---
+type: readme
+title: Blytz Frontend
+resource: blytz-cloud
+description: "Modern React/Next.js frontend for the Blytz AI Assistant Platform."
+tags: [go, nextjs, react, stripe, tailwind, typescript]
+updated: 2026-06-18
+---
+
 # Blytz Frontend
 
 Modern React/Next.js frontend for the Blytz AI Assistant Platform.

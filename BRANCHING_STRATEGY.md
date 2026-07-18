@@ -1,3 +1,12 @@
+---
+type: plan
+title: Git Branching Strategy
+resource: blytz-cloud
+description: "This project uses a **Git Flow** branching strategy with three main branches:"
+tags: [go, rate-limiting, stripe]
+updated: 2026-06-18
+---
+
 # Git Branching Strategy
 
 ## Branch Overview

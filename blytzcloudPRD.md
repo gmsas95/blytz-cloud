@@ -1,3 +1,12 @@
+---
+type: guide
+title: Blytz Personal AI Assistant Platform - Complete PRD & Documentation
+resource: blytz-cloud
+description: "1. [Executive Summary](#1-executive-summary)"
+tags: [docker, go, stripe]
+updated: 2026-06-18
+---
+
 # Blytz Personal AI Assistant Platform - Complete PRD & Documentation
 
 ---

@@ -1,3 +1,12 @@
+---
+type: architecture
+title: Multi-Agent Marketplace Architecture
+resource: blytz-cloud
+description: "Platform provides **infrastructure-as-a-service** for personal AI agents."
+tags: [architecture, docker, go, python]
+updated: 2026-06-18
+---
+
 # Multi-Agent Marketplace Architecture
 
 ## Concept

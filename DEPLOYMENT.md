@@ -1,3 +1,12 @@
+---
+type: guide
+title: Blytz Cloud - Production Deployment Guide
+resource: blytz-cloud
+description: "Complete guide for deploying Blytz Cloud on your infrastructure."
+tags: [deployment, docker, go, nextjs, postgresql, redis, stripe]
+updated: 2026-06-18
+---
+
 # Blytz Cloud - Production Deployment Guide
 
 Complete guide for deploying Blytz Cloud on your infrastructure.
